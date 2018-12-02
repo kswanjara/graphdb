@@ -13,16 +13,9 @@ public class JBLASSpike {
     public static void main(String[] args) {
         DoubleMatrix matrix = new DoubleMatrix(new double[][]{
                 //    0  1  2  3  4  5  6  7  8  9
-                /*0*/{0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
-                /*1*/{1, 0, 1, 0, 1, 0, 1, 0, 0, 1},
-                /*2*/{0, 1, 0, 1, 0, 1, 1, 1, 0, 1},
-                /*3*/{0, 0, 1, 0, 0, 0, 0, 1, 1, 0},
-                /*4*/{1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
-                /*5*/{0, 0, 1, 0, 1, 0, 1, 0, 0, 1},
-                /*6*/{0, 1, 1, 0, 1, 1, 0, 1, 0, 1},
-                /*7*/{1, 0, 1, 1, 0, 0, 1, 0, 1, 0},
-                /*8*/{1, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-                /*9*/{1, 1, 1, 0, 0, 1, 1, 0, 1, 0}
+                /*0*/{2,4,0},
+                /*1*/{5,1,3},
+                /*2*/{5,6,4}
         });
 
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvalues(matrix);
@@ -30,17 +23,20 @@ public class JBLASSpike {
         StringBuilder s = new StringBuilder();
         s.append("[");
 
+        int max = 2;
         for (int i = 0; i < eigenVectors.rows; ++i) {
             for (int j = 0; j < eigenVectors.columns; ++j) {
-                s.append((int) eigenVectors.get(i, j).real());
-                if (j < eigenVectors.columns - 1) {
-                    s.append(", ");
-                }
+                s.append(eigenVectors.get(i, j).real());
+                max--;
+                if(max==0)
+                    break;
             }
 
-            if (i < eigenVectors.rows - 1) {
-                s.append("; ");
+            if (i < eigenVectors.rows - 1 && max > 0) {
+                s.append(", ");
             }
+            if(max==0)
+                break;
         }
 
         s.append("]");

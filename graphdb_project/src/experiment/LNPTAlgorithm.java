@@ -1,88 +1,124 @@
 package experiment;
 
 import common.Node;
+import common.TreeNode;
 import org.apache.commons.lang.StringUtils;
+import org.jgrapht.Graph;
+import org.jgrapht.Graphs;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleGraph;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.*;
+
 
 public class LNPTAlgorithm {
 
     //    public static final String filePath = "C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target\\backbones_1AF7.grf";
-    public static final String filePath = "C:\\Users\\Kunal Wanjara\\Desktop\\trial.txt";
+//    public static final String filePath = "C:\\Users\\Kunal Wanjara\\Desktop\\trial.txt";
+    public static final String filePath = "trial.txt";
     private static Map<String, Node> nodeVals;
+    Graph<Integer, DefaultEdge> queryGraph = null;
+    HashMap<Integer, String> attributeLabels = null;
 
     public static void main(String[] args) throws FileNotFoundException {
-        Set<Node> graph = generateQueryGraph();
-        if (graph.size() > 0) {
-            System.out.println(graph.size());
-            Node v = graph.iterator().next();
-            Node lnptTree = getAdjacencyList(v, 2);
+        LNPTAlgorithm lnpt = new LNPTAlgorithm();
+        lnpt.createGraph();
+        if (lnpt.queryGraph.vertexSet().size() > 0) {
+            Set vertex = lnpt.queryGraph.vertexSet();
+            Iterator<Integer> it = vertex.iterator();
+            while(it.hasNext()) {
 
-            System.out.println("Done = " + counter);
-        }
-    }
-
-    private static Node getAdjacencyList(Node v, int n) {
-        Map<Node, ArrayList<Node>> lnptTree = new HashMap<>();
-        Node root = new Node("", v.getId(), v.getAttr());
-        Set<Integer> visited = new HashSet<>();
-        visited.add(v.getId());
-        counter++;
-        for (Node r : v.getNeighbors()) {
-            Node r1 = new Node("", r.getId(), r.getAttr());
-            root.getNeighbors().add(r1);
-            visited.add(r.getId());
-            counter++;
-            digTree(r, r1, n, visited);
-            visited.remove(r.getId());
-        }
-
-        return root;
-    }
-
-    public static int counter = 0;
-
-    private static void digTree(Node r, Node r1, int n, Set<Integer> visited) {
-        n = n - 1;
-        if (n == 0) {
-            return;
-        }
-        for (Node neigh : r.getNeighbors()) {
-            if (!visited.add(neigh.getId())) {
-                continue;
+//                Integer v = it.next();
+//                int[][] adjMatrix = lnpt.getLnptTree(v,2);
+//                for (int i = 0; i < adjMatrix.length; i++) {
+//                    for (int j = 0; j < adjMatrix.length; j++) {
+//                        System.out.print(adjMatrix[i][j]);
+//                    }
+//                    System.out.println();
+//                }
             }
-            Node neigh1 = new Node("", neigh.getId(), neigh.getAttr());
-            r1.getNeighbors().add(neigh1);
-            counter++;
-            digTree(neigh, neigh1, n, visited);
-            visited.remove(neigh.getId());
         }
+
     }
 
-    public static Set<Node> generateQueryGraph() throws FileNotFoundException {
-        Map<Node, ArrayList<Node>> map = new LinkedHashMap<>();
-        nodeVals = new HashMap<>();
-        File file = new File(filePath);
-        Scanner sc = new Scanner(file);
-        while (sc.hasNextLine()) {
-            String[] input = sc.nextLine().trim().split(" ");
-            if (input.length > 1) {
-                if (!StringUtils.isNumeric(input[1])) {
-                    String nodeName = "u" + input[0];
-                    Node node = new Node(nodeName, Integer.parseInt(input[0]), input[1]);
-                    map.put(node, new ArrayList<>());
-                    nodeVals.put(nodeName, node);
+//    public int[][] getLnptTree(Integer v, int level) {
+//        TreeNode root = new TreeNode(v);
+//        HashSet<Integer> visited = new HashSet<>();
+//        visited.add(v);
+//        ArrayList<TreeNode> adjNodes = new ArrayList<>();
+//        for (Integer i : Graphs.neighborListOf(queryGraph, v)){
+//            TreeNode r = new TreeNode(i);
+//            adjNodes.add(r);
+//            visited.add(i);
+//            search(i,level-1, visited,r);
+//        }
+//        root.setAdjList(adjNodes);
+//        int[][] adjList = new int[visited.size()][visited.size()];
+//        for(TreeNode n : root.getAdjList()){
+//            adjList[root.getName()][n.getName()] = 1;
+//            adjList[n.getName()][root.getName()] = 1;
+//            adjList = createAdjacency(n,adjList);
+//        }
+//        return adjList;
+//    }
+//
+//    public int[][] createAdjacency(TreeNode node, int[][] adjList){
+//       if(node.getAdjList().size() > 0) {
+//           for (TreeNode n : node.getAdjList()) {
+//               adjList[node.getName()][n.getName()] = 1;
+//               adjList[n.getName()][node.getName()] = 1;
+//               adjList = createAdjacency(n, adjList);
+//           }
+//       }
+//       return adjList;
+//    }
 
-                } else {
-                    String node1 = "u" + input[0];
-                    String node2 = "u" + input[1];
+//    public void search(Integer v, int level, HashSet<Integer> visited, TreeNode node){
+//        if(level == 0){
+//            return;
+//        }
+//        ArrayList<TreeNode> adjNodes = new ArrayList<>();
+//        for (Integer i : Graphs.neighborListOf(queryGraph, v)){
+//            if(!visited.contains(i)) {
+//                TreeNode r = new TreeNode(i);
+//                adjNodes.add(r);
+//                visited.add(i);
+//                search(i, level - 1, visited, r);
+//            }
+//        }
+//        node.setAdjList(adjNodes);
+//    }
 
-                    map.get(nodeVals.get(node1).getNeighbors().add((nodeVals.get(node2))));
+    public void createGraph(){
+
+        queryGraph = new SimpleGraph<>(DefaultEdge.class);
+        attributeLabels = new HashMap<Integer, String>();
+        String l = null;
+        try {
+
+            BufferedReader br = new BufferedReader(new FileReader(filePath));
+            while((l = br.readLine()) != null) {
+                String[] str = l.split(" ");
+                if(str.length > 1){
+                    if(StringUtils.isNumeric(str[1])){
+                        queryGraph.addEdge(Integer.parseInt(str[0]), Integer.parseInt(str[1]));
+                    }else{
+                        queryGraph.addVertex(Integer.parseInt(str[0]));
+                        attributeLabels.put(Integer.parseInt(str[0]),str[1]);
+                    }
+
                 }
+
             }
+
+            br.close();
         }
-        return map.keySet();
+        catch(Exception ex) {
+            ex.printStackTrace();
+        }
+
     }
 }
