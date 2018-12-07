@@ -9,6 +9,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -99,27 +100,20 @@ public class GenerateGCode {
         return root;
     }
 
-    private static String getEigenValues(double[][] adjMatrix){
+    private static Double getEigenValues(double[][] adjMatrix){
 
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvalues(new DoubleMatrix(adjMatrix));
 
+        ArrayList<Double> eigen = new ArrayList<>();
+
         StringBuilder s = new StringBuilder();
-        int max = 2;
         for (int i = 0; i < eigenVectors.rows; ++i) {
             for (int j = 0; j < eigenVectors.columns; ++j) {
-                s.append(eigenVectors.get(i, j).real());
-                max--;
-                if(max==0)
-                    break;
+                eigen.add(eigenVectors.get(i, j).real());
             }
-
-            if (i < eigenVectors.rows - 1 && max > 0) {
-                s.append(", ");
-            }
-            if(max==0)
-                break;
         }
-        return s.toString();
+        Collections.sort(eigen,Collections.reverseOrder());
+        return eigen.get(1);
 
     }
 
@@ -129,8 +123,8 @@ public class GenerateGCode {
             while (allNodes.hasNext()) {
                 Node node = allNodes.next();
                 double[][] adjMatrix = createAdjMat(node,2, target);
-                String eigens = getEigenValues(adjMatrix);
-//                System.out.println(eigens);
+                Double eigen = getEigenValues(adjMatrix);
+                System.out.println(eigen);
 
             }
         }
