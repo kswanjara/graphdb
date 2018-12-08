@@ -33,60 +33,62 @@ public class DataLoader {
             inserter = BatchInserters.inserter(new File("proteins"));
             File folder = new File(targetPath);
 
-//            for (File file : folder.listFiles()) {
-            BufferedReader br = new BufferedReader(new FileReader(new File("Trial.txt")));
-            String line;
-            int totalNodes = Integer.parseInt(br.readLine());
-            int numberOfEdges = 0;
-            boolean newNode = false;
-            String newNodeId = "";
+            for (File file : folder.listFiles()) {
+//            BufferedReader br = new BufferedReader(new FileReader(new File("Trial.txt")));
+                BufferedReader br = new BufferedReader(new FileReader(file));
+                String line;
+                int totalNodes = Integer.parseInt(br.readLine());
+                int numberOfEdges = 0;
+                boolean newNode = false;
+                String newNodeId = "";
 
-            int prefixVal;
-            prefixVal = counter.getAndAdd(incremetor);
+                int prefixVal;
+                prefixVal = counter.getAndAdd(incremetor);
 
-            for (int i = 1; i <= totalNodes; i++) {
-                // createNodes
-                String[] str = br.readLine().split(" ");
-                HashMap<String, Object> map = new HashMap<String, Object>();
-                map.put("id", Integer.parseInt(str[0]));
-                map.put("attr", str[1]);
-//                    inserter.createNode(prefixVal + Long.parseLong(str[0]), map,
-//                            Label.label(str[1]), Label.label(file.getName().substring(0, file.getName().indexOf('.'))));
-                inserter.createNode(prefixVal + Long.parseLong(str[0]), map,
-                        Label.label(str[1]), Label.label("trial.txt".substring(0, "trial.txt".indexOf('.'))));
-            }
-            List<String> neigh = new ArrayList<String>();
-            while ((line = br.readLine()) != null) {
-                if (line.split(" ").length == 1) {
-                    // number of edges
-                    numberOfEdges = Integer.parseInt(line);
-                    newNode = true;
-                    if (!newNodeId.equals("") && neigh.size() > 0) {
-                        Collections.sort(neigh);
-                        String[] neighs = neigh.toArray(new String[0]);
-                        inserter.setNodeProperty(prefixVal + Long.parseLong(newNodeId), "neigh", neighs);
-                        neigh = new ArrayList<String>();
-                    }
-                } else {
-                    // edge
-                    String[] nodes = line.split(" ");
-                    if (newNode) {
-                        newNode = false;
-                        newNodeId = nodes[0];
-                    }
-                    inserter.createRelationship(prefixVal + Long.parseLong(nodes[0]), prefixVal + Long.parseLong(nodes[1]),
-                            RelationshipType.withName("HasEdge"), new HashMap<>());
-
-                    neigh.add((String) inserter.getNodeProperties(prefixVal + Long.parseLong(nodes[1])).get("attr"));
+                for (int i = 1; i <= totalNodes; i++) {
+                    // createNodes
+                    String[] str = br.readLine().split(" ");
+                    HashMap<String, Object> map = new HashMap<String, Object>();
+                    map.put("id", Integer.parseInt(str[0]));
+                    map.put("attr", str[1]);
+                    inserter.createNode(prefixVal + Long.parseLong(str[0]), map,
+                            Label.label(str[1]), Label.label(file.getName().substring(0, file.getName().indexOf('.'))));
+//                inserter.createNode(prefixVal + Long.parseLong(str[0]), map,
+//                        Label.label(str[1]), Label.label("trial.txt".substring(0, "trial.txt".indexOf('.'))));
                 }
+                List<String> neigh = new ArrayList<String>();
+                while ((line = br.readLine()) != null) {
+                    if (line.split(" ").length == 1) {
+                        // number of edges
+                        numberOfEdges = Integer.parseInt(line);
+                        newNode = true;
+                        if (!newNodeId.equals("") && neigh.size() > 0) {
+                            Collections.sort(neigh);
+                            String[] neighs = neigh.toArray(new String[0]);
+                            inserter.setNodeProperty(prefixVal + Long.parseLong(newNodeId), "neigh", neighs);
+                            neigh = new ArrayList<String>();
+                        }
+                    } else {
+                        // edge
+                        String[] nodes = line.split(" ");
+                        if (newNode) {
+                            newNode = false;
+                            newNodeId = nodes[0];
+                        }
+                        inserter.createRelationship(prefixVal + Long.parseLong(nodes[0]), prefixVal + Long.parseLong(nodes[1]),
+                                RelationshipType.withName("HasEdge"), new HashMap<>());
+
+                        neigh.add((String) inserter.getNodeProperties(prefixVal + Long.parseLong(nodes[1])).get("attr"));
+                    }
+                }
+                if (neigh.size() > 0) {
+                    Collections.sort(neigh);
+                    String[] neighs = neigh.toArray(new String[0]);
+                    inserter.setNodeProperty(prefixVal + Long.parseLong(newNodeId), "neigh", neighs);
+                }
+                System.out.println("File " + file.getName() + " loaded!");
+//            System.out.println("File trial.txt loaded!");
             }
-            if (neigh.size() > 0) {
-                Collections.sort(neigh);
-                String[] neighs = neigh.toArray(new String[0]);
-                inserter.setNodeProperty(prefixVal + Long.parseLong(newNodeId), "neigh", neighs);
-            }
-//            System.out.println("File " + file.getName() + " loaded!");
-//            }
         } catch (Exception e) {
             e.printStackTrace();
         }

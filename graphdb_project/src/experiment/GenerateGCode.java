@@ -14,12 +14,14 @@ public class GenerateGCode {
 
     static GraphDatabaseFactory dbFactory;
     static GraphDatabaseService db;
-//    static final File folder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
-    static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
+    static final File folder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
+    //    static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
     private static double minEigen1 = Double.MAX_VALUE;
     private static double minEigen2 = Double.MAX_VALUE;
     private static long labelHash = 0;
     private static long neighHash = 0;
+    static ArrayList<Double> eigenSeq1 = new ArrayList<>();
+    static ArrayList<Double> eigenSeq2 = new ArrayList<>();
 
     private static long id = 0L;
 
@@ -60,7 +62,7 @@ public class GenerateGCode {
         return;
     }
 
-    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer,Integer> numNodes) {
+    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer, Integer> numNodes) {
         if (node.getAdjList().size() > 0) {
             for (TreeNode n : node.getAdjList()) {
                 adjList[numNodes.get(node.getId())][numNodes.get(n.getId())] = 1;
@@ -128,8 +130,8 @@ public class GenerateGCode {
         minEigen2 = Double.MAX_VALUE;
         labelHash = 0;
         neighHash = 0;
-        ArrayList<Double> eigens1 = new ArrayList<>();
-        ArrayList<Double> eigens2 = new ArrayList<>();
+        eigenSeq1 = new ArrayList<>();
+        eigenSeq2 = new ArrayList<>();
 
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
@@ -138,11 +140,12 @@ public class GenerateGCode {
                 Double[] eigen = getEigenValues(adjMatrix);
                 minEigen1 = Double.min(eigen[0], minEigen1);
                 minEigen2 = Double.min(eigen[1], minEigen2);
-                eigens1.add(eigen[0]);
-                eigens2.add(eigen[1]);
+                eigenSeq1.add(eigen[0]);
+                eigenSeq2.add(eigen[1]);
 //                System.out.println(eigen);
 
-                generateHashForNode(node); }
+                generateHashForNode(node);
+            }
         }
 
 //        Node n = db.createNode(Label.label(target));
@@ -150,10 +153,10 @@ public class GenerateGCode {
 //        n.setProperty("N", neighHash);
 //        n.setProperty("minEigen", minEigen);
 
-        Collections.sort(eigens1,Collections.reverseOrder());
-        Collections.sort(eigens2,Collections.reverseOrder());
-        System.out.println(eigens1);
-        System.out.println(eigens2);
+        Collections.sort(eigenSeq1, Collections.reverseOrder());
+        Collections.sort(eigenSeq2, Collections.reverseOrder());
+//        System.out.println(eigens1);
+//        System.out.println(eigens2);
 
         long end = System.currentTimeMillis();
         System.out.println("GraphIndex for " + target + ": L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
@@ -191,13 +194,73 @@ public class GenerateGCode {
         try (Transaction trax = db.beginTx()) {
 //            for (File fileEntry : folder.listFiles()) {
 //                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
-        generateGCode("backbones_3GLD");
-//            generateGCode("trial");
+//            generateGCode("backbones_3GLD");
+            generateGCode("backbones_1KFN");
+            //      generateGCode("trial");
 //                generateGCode(targetFile);
 //            }
             trax.success();
         }
         db.shutdown();
+
+        GenerateQueryGcode lnpt = new GenerateQueryGcode();
+//        for (File fileEntry : folder.listFiles()) {
+//            String queryFileFile = null;
+//            try {
+//                queryFileFile = fileEntry.getCanonicalPath();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+        lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\mus_musculus_1U34.8.sub.grf");
+        lnpt.updateProfilesForQuery();
+        lnpt.generateGCode();
+
+        compareGCode(lnpt);
+
+    }
+
+    private static void compareGCode(GenerateQueryGcode lnpt) {
+        boolean allFine = true;
+        if (lnpt.labelHash < labelHash) {
+            System.out.println("Label condition true!");
+        } else {
+            allFine = false;
+            System.out.println("Label condition failed!");
+            return;
+        }
+        if (lnpt.neighHash < neighHash) {
+            System.out.println("Neighbour condition true!");
+        } else {
+            allFine = false;
+            System.out.println("Neighbour condition failed!");
+            return;
+        }
+        if (lnpt.eigens1.size() > eigenSeq1.size() || lnpt.eigens2.size() > eigenSeq2.size()) {
+            allFine = false;
+            System.out.println("Eigen sequence size did not match!");
+            return;
+        }
+        for (int i = 0; i < lnpt.eigens1.size(); i++) {
+            if (lnpt.eigens1.get(i) <= eigenSeq1.get(i)) {
+                continue;
+            } else {
+                allFine = false;
+                System.out.println("Seq1 conparison failed!");
+                return;
+            }
+        }
+
+        for (int i = 0; i < lnpt.eigens2.size(); i++) {
+            if (lnpt.eigens2.get(i) <= eigenSeq2.get(i)) {
+                continue;
+            } else {
+                allFine = false;
+                System.out.println("Seq2 conparison failed!");
+                return;
+            }
+        }
+
+        System.out.println("Eigen values compared successfully!");
 
     }
 

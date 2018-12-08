@@ -21,12 +21,14 @@ public class GenerateQueryGcode {
     Graph<Integer, DefaultEdge> queryGraph = null;
     HashMap<Integer, String> attributeLabels = null;
     HashMap<Integer, List<String>> profiles = new HashMap<>();
-    private long labelHash = 0;
-    private long neighHash = 0;
-    private double minEigen1 = Double.MIN_VALUE;
-    private double minEigen2 = Double.MIN_VALUE;
+    long labelHash = 0;
+    long neighHash = 0;
+    double minEigen1 = Double.MIN_VALUE;
+    double minEigen2 = Double.MIN_VALUE;
+    ArrayList<Double> eigens1 = new ArrayList<>();
+    ArrayList<Double> eigens2 = new ArrayList<>();
 
-    public void createGraph(String filePath){
+    public void createGraph(String filePath) {
 
         queryGraph = new SimpleGraph<>(DefaultEdge.class);
         attributeLabels = new HashMap<Integer, String>();
@@ -34,14 +36,14 @@ public class GenerateQueryGcode {
         try {
 
             BufferedReader br = new BufferedReader(new FileReader(filePath));
-            while((l = br.readLine()) != null) {
+            while ((l = br.readLine()) != null) {
                 String[] str = l.split(" ");
-                if(str.length > 1){
-                    if(StringUtils.isNumeric(str[1])){
+                if (str.length > 1) {
+                    if (StringUtils.isNumeric(str[1])) {
                         queryGraph.addEdge(Integer.parseInt(str[0]), Integer.parseInt(str[1]));
-                    }else{
+                    } else {
                         queryGraph.addVertex(Integer.parseInt(str[0]));
-                        attributeLabels.put(Integer.parseInt(str[0]),str[1]);
+                        attributeLabels.put(Integer.parseInt(str[0]), str[1]);
                     }
 
                 }
@@ -49,36 +51,35 @@ public class GenerateQueryGcode {
             }
 
             br.close();
-        }
-        catch(Exception ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
 
     }
 
-    private void updateProfilesForQuery() {
-        for(Integer u : queryGraph.vertexSet()) {
+    public void updateProfilesForQuery() {
+        for (Integer u : queryGraph.vertexSet()) {
 
             List<String> profile = new ArrayList<>();
-            for(Integer neigh :  Graphs.neighborListOf(queryGraph, u)){
+            for (Integer neigh : Graphs.neighborListOf(queryGraph, u)) {
                 profile.add(attributeLabels.get(neigh));
             }
             Collections.sort(profile);
-            profiles.put(u,profile);
+            profiles.put(u, profile);
         }
     }
 
-    private void search(Integer n, int level, ArrayList<Integer> visited, TreeNode node, HashMap<Integer,Integer> count){
-        if(level > 0) {
+    private void search(Integer n, int level, ArrayList<Integer> visited, TreeNode node, HashMap<Integer, Integer> count) {
+        if (level > 0) {
 
             ArrayList<TreeNode> adjNodes = new ArrayList<>();
-            for(Integer neigh :  Graphs.neighborListOf(queryGraph, n)){
+            for (Integer neigh : Graphs.neighborListOf(queryGraph, n)) {
                 if (!visited.contains(neigh)) {
                     TreeNode r = new TreeNode(attributeLabels.get(neigh), neigh);
                     adjNodes.add(r);
                     visited.add(r.getId());
-                    count.put(r.getId(),count.getOrDefault(r.getId(),count.size()));
-                    search(neigh,level-1, visited,r,count);
+                    count.put(r.getId(), count.getOrDefault(r.getId(), count.size()));
+                    search(neigh, level - 1, visited, r, count);
                     visited.remove(neigh);
                 }
             }
@@ -87,25 +88,25 @@ public class GenerateQueryGcode {
         return;
     }
 
-    private TreeNode createLNPT(Integer n, int level, HashMap<Integer,Integer> count ){
+    private TreeNode createLNPT(Integer n, int level, HashMap<Integer, Integer> count) {
         ArrayList<Integer> visited = new ArrayList<>();
-        TreeNode root = new TreeNode(attributeLabels.get(n),n);
+        TreeNode root = new TreeNode(attributeLabels.get(n), n);
         visited.add(n);
-        count.put(n,count.getOrDefault(n,count.size()));
+        count.put(n, count.getOrDefault(n, count.size()));
 
         ArrayList<TreeNode> adjNodes = new ArrayList<>();
-        for(Integer neigh :  Graphs.neighborListOf(queryGraph, n)){
-            TreeNode r = new TreeNode(attributeLabels.get(neigh),neigh);
+        for (Integer neigh : Graphs.neighborListOf(queryGraph, n)) {
+            TreeNode r = new TreeNode(attributeLabels.get(neigh), neigh);
             adjNodes.add(r);
             visited.add(r.getId());
-            count.put(r.getId(),count.getOrDefault(r.getId(),count.size()));
-            search(neigh,level-1, visited,r,count);
+            count.put(r.getId(), count.getOrDefault(r.getId(), count.size()));
+            search(neigh, level - 1, visited, r, count);
         }
         root.setAdjList(adjNodes);
         return root;
     }
 
-    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer,Integer> numNodes) {
+    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer, Integer> numNodes) {
         if (node.getAdjList().size() > 0) {
             for (TreeNode n : node.getAdjList()) {
                 adjList[numNodes.get(node.getId())][numNodes.get(n.getId())] = 1;
@@ -116,16 +117,16 @@ public class GenerateQueryGcode {
         return adjList;
     }
 
-    private double[][] createAdjMat(Integer node, int level){
+    private double[][] createAdjMat(Integer node, int level) {
 
-        HashMap<Integer,Integer> numNodes = new HashMap<>();
-        TreeNode root = createLNPT(node,level,numNodes);
+        HashMap<Integer, Integer> numNodes = new HashMap<>();
+        TreeNode root = createLNPT(node, level, numNodes);
 
         double[][] adjList = new double[numNodes.size()][numNodes.size()];
-        for(TreeNode tn : root.getAdjList()){
+        for (TreeNode tn : root.getAdjList()) {
             adjList[numNodes.get(root.getId())][numNodes.get(tn.getId())] = 1;
             adjList[numNodes.get(tn.getId())][numNodes.get(root.getId())] = 1;
-            adjList = createAdjacency(tn,adjList,numNodes);
+            adjList = createAdjacency(tn, adjList, numNodes);
         }
         return adjList;
     }
@@ -148,16 +149,16 @@ public class GenerateQueryGcode {
 
     }
 
-    private void generateGCode() {
+    public void generateGCode() {
         long start = System.currentTimeMillis();
         minEigen1 = Double.MIN_VALUE;
         minEigen2 = Double.MIN_VALUE;
         labelHash = 0;
         neighHash = 0;
-        ArrayList<Double> eigens1 = new ArrayList<>();
-        ArrayList<Double> eigens2 = new ArrayList<>();
+        eigens1 = new ArrayList<>();
+        eigens2 = new ArrayList<>();
 
-        for(Integer u : queryGraph.vertexSet()) {
+        for (Integer u : queryGraph.vertexSet()) {
             double[][] adjMatrix = createAdjMat(u, 2);
             Double[] eigen = getEigenValues(adjMatrix);
             minEigen1 = Double.max(eigen[0], minEigen1);
@@ -166,13 +167,13 @@ public class GenerateQueryGcode {
             eigens2.add(eigen[1]);
 //                System.out.println(eigen);
 
-                generateHashForNode(u);
+            generateHashForNode(u);
         }
 
-        Collections.sort(eigens1,Collections.reverseOrder());
-        Collections.sort(eigens2,Collections.reverseOrder());
-        System.out.println(eigens1);
-        System.out.println(eigens2);
+        Collections.sort(eigens1, Collections.reverseOrder());
+        Collections.sort(eigens2, Collections.reverseOrder());
+//        System.out.println(eigens1);
+//        System.out.println(eigens2);
 
 //        Node n = db.createNode(Label.label(target));
 //        n.setProperty("L", labelHash);
@@ -214,9 +215,10 @@ public class GenerateQueryGcode {
 //            } catch (IOException e) {
 //                e.printStackTrace();
 //            }
-            lnpt.createGraph("/Users/jinalshah/Downloads/Proteins/Proteins/query/mus_musculus_1U34.8.sub.grf");
-            lnpt.updateProfilesForQuery();
-            lnpt.generateGCode();
+//        lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\mus_musculus_1U34.8.sub.grf");
+        lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\backbones_1EMA.8.sub.grf");
+        lnpt.updateProfilesForQuery();
+        lnpt.generateGCode();
 //        }
     }
 }
