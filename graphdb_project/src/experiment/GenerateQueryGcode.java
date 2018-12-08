@@ -19,6 +19,11 @@ public class GenerateQueryGcode {
     static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
     Graph<Integer, DefaultEdge> queryGraph = null;
     HashMap<Integer, String> attributeLabels = null;
+    HashMap<Integer, List<String>> profiles = new HashMap<>();
+    private long labelHash = 0;
+    private long neighHash = 0;
+    private double minEigen1 = Double.MAX_VALUE;
+    private double minEigen2 = Double.MAX_VALUE;
 
     public void createGraph(String filePath){
 
@@ -48,6 +53,18 @@ public class GenerateQueryGcode {
             ex.printStackTrace();
         }
 
+    }
+
+    private void updateProfilesForQuery() {
+        for(Integer u : queryGraph.vertexSet()) {
+
+            List<String> profile = new ArrayList<>();
+            for(Integer neigh :  Graphs.neighborListOf(queryGraph, u)){
+                profile.add(attributeLabels.get(neigh));
+            }
+            Collections.sort(profile);
+            profiles.put(u,profile);
+        }
     }
 
     private void search(Integer n, int level, ArrayList<Integer> visited, TreeNode node, HashMap<Integer,Integer> count){
@@ -112,7 +129,7 @@ public class GenerateQueryGcode {
         return adjList;
     }
 
-    private static Double getEigenValues(double[][] adjMatrix){
+    private Double[] getEigenValues(double[][] adjMatrix) {
 
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvalues(new DoubleMatrix(adjMatrix));
 
@@ -124,20 +141,58 @@ public class GenerateQueryGcode {
                 eigen.add(eigenVectors.get(i, j).real());
             }
         }
-        Collections.sort(eigen,Collections.reverseOrder());
-        return eigen.get(0);
+        Collections.sort(eigen, Collections.reverseOrder());
+        Double[] eigenVals = {eigen.get(0), eigen.get(1)};
+        return eigenVals;
 
     }
 
-    private void generateGCode(){
+    private void generateGCode() {
+        long start = System.currentTimeMillis();
+        minEigen1 = Double.MAX_VALUE;
+        minEigen2 = Double.MAX_VALUE;
+        labelHash = 0;
+        neighHash = 0;
 
         for(Integer u : queryGraph.vertexSet()) {
             double[][] adjMatrix = createAdjMat(u, 2);
-            Double eigen = getEigenValues(adjMatrix);
-            System.out.println(eigen);
+            Double[] eigen = getEigenValues(adjMatrix);
+            minEigen1 = Double.min(eigen[0], minEigen1);
+            minEigen2 = Double.min(eigen[1], minEigen2);
+//                System.out.println(eigen);
 
+                generateHashForNode(u);
         }
 
+//        Node n = db.createNode(Label.label(target));
+//        n.setProperty("L", labelHash);
+//        n.setProperty("N", neighHash);
+//        n.setProperty("minEigen", minEigen);
+
+
+        long end = System.currentTimeMillis();
+        System.out.println("GraphIndex for : L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
+        System.out.println("time taken : " + ((end - start) / 1000));
+    }
+
+    private void generateHashForNode(Integer n) {
+        String label = attributeLabels.get(n);
+        labelHash += getHashCode(label);
+        List<String> neigh = profiles.get(n);
+        long neighborHash = 0;
+        for (String s : neigh) {
+            if (s != null || !s.equalsIgnoreCase("")) {
+                neighborHash += getHashCode(s);
+            }
+        }
+        neighHash += neighborHash;
+    }
+
+    private long getHashCode(String label) {
+        char character = label.toUpperCase().charAt(0);
+        int ascii = (int) character - 64;
+
+        return ascii % 27;
     }
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -149,7 +204,8 @@ public class GenerateQueryGcode {
 //            } catch (IOException e) {
 //                e.printStackTrace();
 //            }
-            lnpt.createGraph("/Users/jinalshah/Downloads/Proteins/Proteins/query/human_2KM2.8.sub.grf");
+            lnpt.createGraph("/Users/jinalshah/Downloads/Proteins/Proteins/query/backbones_1EMA.8.sub.grf");
+            lnpt.updateProfilesForQuery();
             lnpt.generateGCode();
 //        }
     }
