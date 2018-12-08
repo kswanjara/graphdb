@@ -1,6 +1,5 @@
 package vf2;
 
-import common.Node;
 import org.apache.commons.lang.StringUtils;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -13,6 +12,8 @@ import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+
+import common.Node;
 
 @SuppressWarnings({"unused", "StringBufferReplaceableByString", "SuspiciousMethodCalls", "StringConcatenationInsideStringBufferAppend"})
 public class InducedVf2Matching {
