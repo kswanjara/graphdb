@@ -128,6 +128,8 @@ public class GenerateGCode {
         minEigen2 = Double.MAX_VALUE;
         labelHash = 0;
         neighHash = 0;
+        ArrayList<Double> eigens1 = new ArrayList<>();
+        ArrayList<Double> eigens2 = new ArrayList<>();
 
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
@@ -136,6 +138,8 @@ public class GenerateGCode {
                 Double[] eigen = getEigenValues(adjMatrix);
                 minEigen1 = Double.min(eigen[0], minEigen1);
                 minEigen2 = Double.min(eigen[1], minEigen2);
+                eigens1.add(eigen[0]);
+                eigens2.add(eigen[1]);
 //                System.out.println(eigen);
 
                 generateHashForNode(node); }
@@ -146,6 +150,10 @@ public class GenerateGCode {
 //        n.setProperty("N", neighHash);
 //        n.setProperty("minEigen", minEigen);
 
+        Collections.sort(eigens1,Collections.reverseOrder());
+        Collections.sort(eigens2,Collections.reverseOrder());
+        System.out.println(eigens1);
+        System.out.println(eigens2);
 
         long end = System.currentTimeMillis();
         System.out.println("GraphIndex for " + target + ": L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
@@ -181,12 +189,12 @@ public class GenerateGCode {
 
         connectToGraphDB();
         try (Transaction trax = db.beginTx()) {
-            for (File fileEntry : folder.listFiles()) {
-                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
-//        generateGCode("backbones_1KFN");
+//            for (File fileEntry : folder.listFiles()) {
+//                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
+        generateGCode("backbones_3GLD");
 //            generateGCode("trial");
 //                generateGCode(targetFile);
-            }
+//            }
             trax.success();
         }
         db.shutdown();

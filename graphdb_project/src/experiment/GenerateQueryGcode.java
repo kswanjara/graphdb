@@ -9,6 +9,7 @@ import org.jgrapht.Graph;
 import org.jgrapht.Graphs;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleGraph;
+import org.neo4j.cypher.internal.frontend.v3_3.phases.Do;
 
 import java.io.*;
 import java.util.*;
@@ -22,8 +23,8 @@ public class GenerateQueryGcode {
     HashMap<Integer, List<String>> profiles = new HashMap<>();
     private long labelHash = 0;
     private long neighHash = 0;
-    private double minEigen1 = Double.MAX_VALUE;
-    private double minEigen2 = Double.MAX_VALUE;
+    private double minEigen1 = Double.MIN_VALUE;
+    private double minEigen2 = Double.MIN_VALUE;
 
     public void createGraph(String filePath){
 
@@ -149,20 +150,29 @@ public class GenerateQueryGcode {
 
     private void generateGCode() {
         long start = System.currentTimeMillis();
-        minEigen1 = Double.MAX_VALUE;
-        minEigen2 = Double.MAX_VALUE;
+        minEigen1 = Double.MIN_VALUE;
+        minEigen2 = Double.MIN_VALUE;
         labelHash = 0;
         neighHash = 0;
+        ArrayList<Double> eigens1 = new ArrayList<>();
+        ArrayList<Double> eigens2 = new ArrayList<>();
 
         for(Integer u : queryGraph.vertexSet()) {
             double[][] adjMatrix = createAdjMat(u, 2);
             Double[] eigen = getEigenValues(adjMatrix);
-            minEigen1 = Double.min(eigen[0], minEigen1);
-            minEigen2 = Double.min(eigen[1], minEigen2);
+            minEigen1 = Double.max(eigen[0], minEigen1);
+            minEigen2 = Double.max(eigen[1], minEigen2);
+            eigens1.add(eigen[0]);
+            eigens2.add(eigen[1]);
 //                System.out.println(eigen);
 
                 generateHashForNode(u);
         }
+
+        Collections.sort(eigens1,Collections.reverseOrder());
+        Collections.sort(eigens2,Collections.reverseOrder());
+        System.out.println(eigens1);
+        System.out.println(eigens2);
 
 //        Node n = db.createNode(Label.label(target));
 //        n.setProperty("L", labelHash);
@@ -204,7 +214,7 @@ public class GenerateQueryGcode {
 //            } catch (IOException e) {
 //                e.printStackTrace();
 //            }
-            lnpt.createGraph("/Users/jinalshah/Downloads/Proteins/Proteins/query/backbones_1EMA.8.sub.grf");
+            lnpt.createGraph("/Users/jinalshah/Downloads/Proteins/Proteins/query/mus_musculus_1U34.8.sub.grf");
             lnpt.updateProfilesForQuery();
             lnpt.generateGCode();
 //        }
