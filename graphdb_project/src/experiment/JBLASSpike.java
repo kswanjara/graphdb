@@ -19,18 +19,27 @@ public class JBLASSpike {
 //                /*2*/{5,6,4}
 //        });
 
+//        DoubleMatrix matrix = new DoubleMatrix(new double[][]{
+//                //    0  1  2  3  4  5  6  7  8  9
+//                /*0*/{0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
+//                /*1*/{1, 0, 1, 0, 1, 0, 1, 0, 0, 1},
+//                /*2*/{0, 1, 0, 1, 0, 1, 1, 1, 0, 1},
+//                /*3*/{0, 0, 1, 0, 0, 0, 0, 1, 1, 0},
+//                /*4*/{1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
+//                /*5*/{0, 0, 1, 0, 1, 0, 1, 0, 0, 1},
+//                /*6*/{0, 1, 1, 0, 1, 1, 0, 1, 0, 1},
+//                /*7*/{1, 0, 1, 1, 0, 0, 1, 0, 1, 0},
+//                /*8*/{1, 0, 0, 1, 0, 0, 0, 1, 0, 1},
+//                /*9*/{1, 1, 1, 0, 0, 1, 1, 0, 1, 0}
+//        });
+
         DoubleMatrix matrix = new DoubleMatrix(new double[][]{
-                //    0  1  2  3  4  5  6  7  8  9
-                /*0*/{0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
-                /*1*/{1, 0, 1, 0, 1, 0, 1, 0, 0, 1},
-                /*2*/{0, 1, 0, 1, 0, 1, 1, 1, 0, 1},
-                /*3*/{0, 0, 1, 0, 0, 0, 0, 1, 1, 0},
-                /*4*/{1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
-                /*5*/{0, 0, 1, 0, 1, 0, 1, 0, 0, 1},
-                /*6*/{0, 1, 1, 0, 1, 1, 0, 1, 0, 1},
-                /*7*/{1, 0, 1, 1, 0, 0, 1, 0, 1, 0},
-                /*8*/{1, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-                /*9*/{1, 1, 1, 0, 0, 1, 1, 0, 1, 0}
+//                A B B C C
+                { 0,1,1,0,0},
+                { 1,0,1,1,1},
+                { 1,1,0,0,0},
+                { 0,1,0,0,0},
+                { 0,1,0,0,0}
         });
 
         ComplexDoubleMatrix eigenVectors = Eigen.eigenvalues(matrix);
@@ -48,7 +57,7 @@ public class JBLASSpike {
             for (int j = 0; j < eigenVectors.columns; ++j) {
                 s.append(eigenVectors.get(i, j).real() );
                 eigen.add(eigenVectors.get(i, j).real());
-                sb.append((int)(eigenVectors.get(i,j).real() * 100));
+                sb.append(eigenVectors.get(i,j).real());
                 max--;
 //                if(max==0)
 //                    break;
@@ -71,7 +80,7 @@ public class JBLASSpike {
         Collections.sort(eigen,Collections.reverseOrder());
         System.out.println(eigen);
 
-        System.out.println(sb.toString());
+//        System.out.println(sb.toString());
 
 
 

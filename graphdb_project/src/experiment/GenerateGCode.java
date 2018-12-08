@@ -14,8 +14,8 @@ public class GenerateGCode {
 
     static GraphDatabaseFactory dbFactory;
     static GraphDatabaseService db;
-    static final File folder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
-
+//    static final File folder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
+    static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
     private static double minEigen1 = Double.MAX_VALUE;
     private static double minEigen2 = Double.MAX_VALUE;
     private static long labelHash = 0;
@@ -23,9 +23,9 @@ public class GenerateGCode {
 
     private static long id = 0L;
 
-    private static ArrayList<Node> getAdjacentDataNodes(Integer v, String target) {
+    private static HashSet<Node> getAdjacentDataNodes(Integer v, String target) {
 
-        ArrayList<Node> nodes = new ArrayList<>();
+        HashSet<Node> nodes = new HashSet<>();
         Node n = db.findNode(Label.label(target), "id", v);
         for (Relationship r : n.getRelationships()) {
             Node neigh = r.getEndNode();
@@ -43,11 +43,11 @@ public class GenerateGCode {
         if (level > 0) {
 
             ArrayList<TreeNode> adjNodes = new ArrayList<>();
-            ArrayList<Node> nodes = getAdjacentDataNodes((Integer) n.getProperty("id"), target);
+            HashSet<Node> nodes = getAdjacentDataNodes((Integer) n.getProperty("id"), target);
             for (Node neigh : nodes) {
                 Integer id = (Integer) neigh.getProperty("id");
                 if (!visited.contains(id)) {
-                    TreeNode r = new TreeNode((String) n.getProperty("attr"), id);
+                    TreeNode r = new TreeNode((String) neigh.getProperty("attr"), id);
                     adjNodes.add(r);
                     visited.add(id);
                     count.put(id, count.getOrDefault(id, count.size()));
@@ -60,12 +60,12 @@ public class GenerateGCode {
         return;
     }
 
-    public static double[][] createAdjacency(TreeNode node, double[][] adjList) {
+    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer,Integer> numNodes) {
         if (node.getAdjList().size() > 0) {
             for (TreeNode n : node.getAdjList()) {
-                adjList[node.getIndex()][n.getIndex()] = 1;
-                adjList[n.getIndex()][node.getIndex()] = 1;
-                adjList = createAdjacency(n, adjList);
+                adjList[numNodes.get(node.getId())][numNodes.get(n.getId())] = 1;
+                adjList[numNodes.get(n.getId())][numNodes.get(node.getId())] = 1;
+                adjList = createAdjacency(n, adjList, numNodes);
             }
         }
         return adjList;
@@ -80,7 +80,7 @@ public class GenerateGCode {
         for (TreeNode tn : root.getAdjList()) {
             adjList[numNodes.get(root.getId())][numNodes.get(tn.getId())] = 1;
             adjList[numNodes.get(tn.getId())][numNodes.get(root.getId())] = 1;
-            adjList = createAdjacency(tn, adjList);
+            adjList = createAdjacency(tn, adjList, numNodes);
         }
         return adjList;
     }
@@ -138,8 +138,7 @@ public class GenerateGCode {
                 minEigen2 = Double.min(eigen[1], minEigen2);
 //                System.out.println(eigen);
 
-                generateHashForNode(node);
-            }
+                generateHashForNode(node); }
         }
 
 //        Node n = db.createNode(Label.label(target));
@@ -175,19 +174,19 @@ public class GenerateGCode {
 
     private static void connectToGraphDB() {
         dbFactory = new GraphDatabaseFactory();
-        db = dbFactory.newEmbeddedDatabase(new File("Proteins"));
+        db = dbFactory.newEmbeddedDatabase(new File("proteins"));
     }
 
     public static void main(String[] args) {
 
         connectToGraphDB();
         try (Transaction trax = db.beginTx()) {
-//            for (File fileEntry : folder.listFiles()) {
-//                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
-//        generateGCode("human_1ZLL");
-            generateGCode("trial");
+            for (File fileEntry : folder.listFiles()) {
+                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
+//        generateGCode("backbones_1KFN");
+//            generateGCode("trial");
 //                generateGCode(targetFile);
-//            }
+            }
             trax.success();
         }
         db.shutdown();

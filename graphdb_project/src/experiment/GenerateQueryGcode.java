@@ -104,12 +104,12 @@ public class GenerateQueryGcode {
         return root;
     }
 
-    public double[][] createAdjacency(TreeNode node, double[][] adjList){
-        if(node.getAdjList().size() > 0) {
+    public static double[][] createAdjacency(TreeNode node, double[][] adjList, HashMap<Integer,Integer> numNodes) {
+        if (node.getAdjList().size() > 0) {
             for (TreeNode n : node.getAdjList()) {
-                adjList[node.getIndex()][n.getIndex()] = 1;
-                adjList[n.getIndex()][node.getIndex()] = 1;
-                adjList = createAdjacency(n, adjList);
+                adjList[numNodes.get(node.getId())][numNodes.get(n.getId())] = 1;
+                adjList[numNodes.get(n.getId())][numNodes.get(node.getId())] = 1;
+                adjList = createAdjacency(n, adjList, numNodes);
             }
         }
         return adjList;
@@ -124,7 +124,7 @@ public class GenerateQueryGcode {
         for(TreeNode tn : root.getAdjList()){
             adjList[numNodes.get(root.getId())][numNodes.get(tn.getId())] = 1;
             adjList[numNodes.get(tn.getId())][numNodes.get(root.getId())] = 1;
-            adjList = createAdjacency(tn,adjList);
+            adjList = createAdjacency(tn,adjList,numNodes);
         }
         return adjList;
     }
