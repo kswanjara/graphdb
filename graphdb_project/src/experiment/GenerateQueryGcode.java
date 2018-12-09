@@ -27,6 +27,8 @@ public class GenerateQueryGcode {
     double minEigen2 = Double.MIN_VALUE;
     ArrayList<Double> eigens1 = new ArrayList<>();
     ArrayList<Double> eigens2 = new ArrayList<>();
+    Map<String, Integer> occurences = new HashMap<>();
+    Map<String, Integer> neighOccurences = new HashMap<>();
 
     public void createGraph(String filePath) {
 
@@ -157,6 +159,8 @@ public class GenerateQueryGcode {
         neighHash = 0;
         eigens1 = new ArrayList<>();
         eigens2 = new ArrayList<>();
+        occurences = new HashMap<>();
+        neighOccurences = new HashMap<>();
 
         for (Integer u : queryGraph.vertexSet()) {
             double[][] adjMatrix = createAdjMat(u, 2);
@@ -182,18 +186,27 @@ public class GenerateQueryGcode {
 
 
         long end = System.currentTimeMillis();
-        System.out.println("GraphIndex for : L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
-        System.out.println("time taken : " + ((end - start) / 1000));
+//        System.out.println("GraphIndex for : L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
+//        System.out.println("time taken : " + ((end - start) / 1000));
     }
 
     private void generateHashForNode(Integer n) {
         String label = attributeLabels.get(n);
         labelHash += getHashCode(label);
         List<String> neigh = profiles.get(n);
+
+        if (!occurences.containsKey(label)) {
+            occurences.put(label, 0);
+        }
+        occurences.put(label, occurences.get(label) + 1);
+
         long neighborHash = 0;
         for (String s : neigh) {
             if (s != null || !s.equalsIgnoreCase("")) {
-                neighborHash += getHashCode(s);
+                if (!neighOccurences.containsKey(label)) {
+                    neighOccurences.put(label, 0);
+                }
+                neighOccurences.put(label, neighOccurences.get(label) + 1);
             }
         }
         neighHash += neighborHash;

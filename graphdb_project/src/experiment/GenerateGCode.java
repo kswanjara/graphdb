@@ -8,20 +8,30 @@ import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class GenerateGCode {
 
     static GraphDatabaseFactory dbFactory;
     static GraphDatabaseService db;
-    static final File folder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
-    //    static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
+    static final File targetfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
+    static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
+    //    static final File targetfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
+    //    static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
     private static double minEigen1 = Double.MAX_VALUE;
     private static double minEigen2 = Double.MAX_VALUE;
     private static long labelHash = 0;
     private static long neighHash = 0;
     static ArrayList<Double> eigenSeq1 = new ArrayList<>();
     static ArrayList<Double> eigenSeq2 = new ArrayList<>();
+    private static Logger logger = Logger.getLogger(GenerateGCode.class.getName());
+    static Map<String, Integer> occurences = new HashMap<>();
+    static Map<String, Integer> neighOccurences = new HashMap<>();
 
     private static long id = 0L;
 
@@ -132,6 +142,8 @@ public class GenerateGCode {
         neighHash = 0;
         eigenSeq1 = new ArrayList<>();
         eigenSeq2 = new ArrayList<>();
+        occurences = new HashMap<>();
+        neighOccurences = new HashMap<>();
 
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
@@ -159,21 +171,39 @@ public class GenerateGCode {
 //        System.out.println(eigens2);
 
         long end = System.currentTimeMillis();
-        System.out.println("GraphIndex for " + target + ": L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
-        System.out.println("time taken : " + ((end - start) / 1000));
+//        System.out.println("GraphIndex for " + target + ": L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
+//        System.out.println("time taken : " + ((end - start) / 1000));
     }
+
 
     private static void generateHashForNode(Node node) {
         String label = (String) node.getProperty("attr");
-        labelHash += getHashCode(label);
         String[] neigh = (String[]) node.getProperty("neigh");
-        long neighborHash = 0;
+
+        if (!occurences.containsKey(label)) {
+            occurences.put(label, 0);
+        }
+        occurences.put(label, occurences.get(label) + 1);
+
         for (String s : neigh) {
             if (s != null || !s.equalsIgnoreCase("")) {
-                neighborHash += getHashCode(s);
+                if (!neighOccurences.containsKey(label)) {
+                    neighOccurences.put(label, 0);
+                }
+                neighOccurences.put(label, neighOccurences.get(label) + 1);
             }
         }
-        neighHash += neighborHash;
+
+//        String label = (String) node.getProperty("attr");
+//        labelHash += getHashCode(label);
+//        String[] neigh = (String[]) node.getProperty("neigh");
+//        long neighborHash = 0;
+//        for (String s : neigh) {
+//            if (s != null || !s.equalsIgnoreCase("")) {
+//                neighborHash += getHashCode(s);
+//            }
+//        }
+//        neighHash += neighborHash;
     }
 
     private static long getHashCode(String label) {
@@ -190,78 +220,109 @@ public class GenerateGCode {
 
     public static void main(String[] args) {
 
-        connectToGraphDB();
-        try (Transaction trax = db.beginTx()) {
-//            for (File fileEntry : folder.listFiles()) {
-//                String targetFile = fileEntry.getName().substring(0, fileEntry.getName().indexOf("."));
-//            generateGCode("backbones_3GLD");
-            generateGCode("backbones_1KFN");
-            //      generateGCode("trial");
-//                generateGCode(targetFile);
-//            }
-            trax.success();
+        Handler fileHandler = null;
+        try {
+            fileHandler = new FileHandler("./GcodeTruth.log");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        db.shutdown();
+        fileHandler.setFormatter(new SimpleFormatter());
+        logger.addHandler(fileHandler);
 
         GenerateQueryGcode lnpt = new GenerateQueryGcode();
-//        for (File fileEntry : folder.listFiles()) {
-//            String queryFileFile = null;
-//            try {
-//                queryFileFile = fileEntry.getCanonicalPath();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-        lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\mus_musculus_1U34.8.sub.grf");
-        lnpt.updateProfilesForQuery();
-        lnpt.generateGCode();
+        for (File fileEntry : queryfolder.listFiles()) {
+            String queryFile = null;
+            try {
+                queryFile = fileEntry.getCanonicalPath();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (queryFile.contains(".8.")) {
+                lnpt.createGraph(queryFile);
+                lnpt.updateProfilesForQuery();
+                lnpt.generateGCode();
 
-        compareGCode(lnpt);
-
+                connectToGraphDB();
+                try (Transaction trax = db.beginTx()) {
+                    for (File fileEntry1 : targetfolder.listFiles()) {
+                        String targetFile = fileEntry1.getName().substring(0, fileEntry1.getName().indexOf("."));
+                        //            generateGCode("backbones_3GLD");
+                        //            generateGCode("backbones_1KFN");
+                        //            generateGCode("trial");
+                        generateGCode(targetFile);
+                        boolean isEligible = compareGCode(lnpt);
+                        if (isEligible) {
+                            logger.info("Not pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
+                        } else {
+                            logger.info("Pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
+                        }
+                    }
+                    trax.success();
+                }
+                db.shutdown();
+            }
+        }
     }
 
-    private static void compareGCode(GenerateQueryGcode lnpt) {
+    private static boolean compareGCode(GenerateQueryGcode lnpt) {
         boolean allFine = true;
-        if (lnpt.labelHash < labelHash) {
-            System.out.println("Label condition true!");
+        if (compareLabels(lnpt)) {
+//            System.out.println("Label condition true!");
         } else {
-            allFine = false;
-            System.out.println("Label condition failed!");
-            return;
+            logger.warning("Label condition failed!");
+            return false;
         }
-        if (lnpt.neighHash < neighHash) {
-            System.out.println("Neighbour condition true!");
+        if (compareNeighLabels(lnpt)) {
+//            System.out.println("Neighbour condition true!");
         } else {
-            allFine = false;
-            System.out.println("Neighbour condition failed!");
-            return;
+            logger.warning("Neighbour condition failed!");
+            return false;
         }
         if (lnpt.eigens1.size() > eigenSeq1.size() || lnpt.eigens2.size() > eigenSeq2.size()) {
-            allFine = false;
-            System.out.println("Eigen sequence size did not match!");
-            return;
-        }
-        for (int i = 0; i < lnpt.eigens1.size(); i++) {
-            if (lnpt.eigens1.get(i) <= eigenSeq1.get(i)) {
-                continue;
-            } else {
-                allFine = false;
-                System.out.println("Seq1 conparison failed!");
-                return;
+            logger.warning("Eigen sequence size did not match!");
+            return false;
+        } else {
+            for (int i = 0; i < lnpt.eigens1.size(); i++) {
+                if (lnpt.eigens1.get(i) <= eigenSeq1.get(i)) {
+                    continue;
+                } else {
+                    logger.warning("Seq1 comparison failed!");
+                    return false;
+                }
+            }
+
+
+            for (int i = 0; i < lnpt.eigens2.size(); i++) {
+                if (lnpt.eigens2.get(i) <= eigenSeq2.get(i)) {
+                    continue;
+                } else {
+                    logger.warning("Seq2 comparison failed!");
+                    return false;
+                }
             }
         }
 
-        for (int i = 0; i < lnpt.eigens2.size(); i++) {
-            if (lnpt.eigens2.get(i) <= eigenSeq2.get(i)) {
-                continue;
-            } else {
-                allFine = false;
-                System.out.println("Seq2 conparison failed!");
-                return;
+//        System.out.println("Eigen values compared successfully!");
+
+        return allFine;
+    }
+
+    private static boolean compareNeighLabels(GenerateQueryGcode lnpt) {
+        for (String key : lnpt.neighOccurences.keySet()) {
+            if (!neighOccurences.containsKey(key) || lnpt.neighOccurences.get(key) > occurences.get(key)) {
+                return false;
             }
         }
+        return true;
+    }
 
-        System.out.println("Eigen values compared successfully!");
-
+    private static boolean compareLabels(GenerateQueryGcode lnpt) {
+        for (String key : lnpt.occurences.keySet()) {
+            if (!occurences.containsKey(key) || lnpt.occurences.get(key) > occurences.get(key)) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
