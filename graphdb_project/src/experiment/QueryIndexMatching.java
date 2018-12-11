@@ -1,9 +1,6 @@
 package experiment;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 import java.io.File;
@@ -19,9 +16,9 @@ public class QueryIndexMatching {
 
     public static GraphDatabaseFactory dbFactory;
     public static GraphDatabaseService db;
-    static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
+//    static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
     //    static final File targetfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
-    //    static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
+        static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
 
     static int queryNodeNumber = 8;
 
@@ -55,17 +52,19 @@ public class QueryIndexMatching {
                 lnpt.generateGCode();
 
                 connectToGraphDB();
-
-                try (ResourceIterator<Node> allNodes = db.findNodes(Label.label("GCode"))) {
-                    while (allNodes.hasNext()) {
-                        Node node = allNodes.next();
-                        boolean isEligible = compareGCode(lnpt, node);
-                        if (isEligible) {
-                            logger.info("Not pruned T: " + (String) node.getProperty("TARGET") + "\tQ: " + fileEntry.getName() + "\n");
-                        } else {
-                            logger.info("Pruned T: " + (String) node.getProperty("TARGET") + "\tQ: " + fileEntry.getName() + "\n");
+                try (Transaction trax = db.beginTx()) {
+                    try (ResourceIterator<Node> allNodes = db.findNodes(Label.label("GCode"))) {
+                        while (allNodes.hasNext()) {
+                            Node node = allNodes.next();
+                            boolean isEligible = compareGCode(lnpt, node);
+                            if (isEligible) {
+                                logger.info("Not pruned T: " + (String) node.getProperty("TARGET") + "\tQ: " + fileEntry.getName() + "\n");
+                            } else {
+                                logger.info("Pruned T: " + (String) node.getProperty("TARGET") + "\tQ: " + fileEntry.getName() + "\n");
+                            }
                         }
                     }
+                    trax.success();
                 }
                 db.shutdown();
             }
@@ -80,8 +79,8 @@ public class QueryIndexMatching {
     private static boolean compareGCode(GenerateQueryGcode lnpt, Node node) {
 
         Map<String, Object> props = node.getAllProperties();
-        Double[] seq1 = (Double[]) props.get("eigenSeq1");
-        Double[] seq2 = (Double[]) props.get("eigenSeq2");
+        double[] seq1 = (double[]) props.get("eigenSeq1");
+        double[] seq2 = (double[]) props.get("eigenSeq2");
 
 
         boolean allFine = true;
