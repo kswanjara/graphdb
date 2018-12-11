@@ -38,7 +38,8 @@ public class QueryIndexMatching {
 
         compareIndexes();
         long end = System.currentTimeMillis();
-        System.out.println("Total time taken : " + (end - start) / 1000 + " sec. ");
+//        System.out.println("Total time taken : " + (end - start) / 1000 + " sec. ");
+        logger.info("Total time taken for " + queryNodeNumber + " nodes query: " + (end - start) / 1000 + " sec. ");
     }
 
     public static void compareIndexes() {

@@ -85,8 +85,6 @@ public class DataLoader {
                     String[] neighs = neigh.toArray(new String[0]);
                     inserter.setNodeProperty(prefixVal + Long.parseLong(newNodeId), "neigh", neighs);
                 }
-//                System.out.println("File " + file.getName() + " loaded!");
-//            System.out.println("File trial.txt loaded!");
             }
         } catch (Exception e) {
             e.printStackTrace();

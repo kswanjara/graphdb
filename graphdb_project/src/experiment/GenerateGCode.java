@@ -42,6 +42,8 @@ public class GenerateGCode {
     static Map<String, Integer> occurences = new HashMap<>();
     static Map<String, Integer> neighOccurences = new HashMap<>();
 
+    static int level = 4;
+
     private static Logger logger = Logger.getLogger(GenerateGCode.class.getName());
 
 
@@ -155,7 +157,7 @@ public class GenerateGCode {
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
                 Node node = allNodes.next();
-                double[][] adjMatrix = createAdjMat(node, 2, target);
+                double[][] adjMatrix = createAdjMat(node, level, target);
                 Double[] eigen = getEigenValues(adjMatrix);
                 eigenSeq1.add(eigen[0]);
                 eigenSeq2.add(eigen[1]);
