@@ -169,15 +169,12 @@ public class GenerateQueryGcode {
             minEigen2 = Double.max(eigen[1], minEigen2);
             eigens1.add(eigen[0]);
             eigens2.add(eigen[1]);
-//                System.out.println(eigen);
 
             generateHashForNode(u);
         }
 
         Collections.sort(eigens1, Collections.reverseOrder());
         Collections.sort(eigens2, Collections.reverseOrder());
-//        System.out.println(eigens1);
-//        System.out.println(eigens2);
 
 //        Node n = db.createNode(Label.label(target));
 //        n.setProperty("L", labelHash);

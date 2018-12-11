@@ -15,30 +15,98 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
+
+/**
+ * @author Jinal Shah
+ * @author Kunal Wanjara
+ * <p>
+ * This class takes the nodes from each disjointed graph from neo4j database and generates the Gcode for each graph.
+ * Stores the indexes for each disjointed graph back in neo4j with the label as the target file name.
+ * <p>
+ * The process of the generating indexes requires the generation of hash code for labels, it's neighbors, and the
+ * eigen values obtained from the n-level path tree from each vertex.
+ * <p>
+ * The {@link HashMap} is used to store the hash of each label and its neighbors. {@link ArrayList} of {@link Double} is
+ * used to maintain the ordered sequence of top two eigen values of each vertex.
+ */
 public class GenerateGCode {
 
-    static GraphDatabaseFactory dbFactory;
-    static GraphDatabaseService db;
+    public static GraphDatabaseFactory dbFactory;
+    public static GraphDatabaseService db;
     static final File targetfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\target");
     static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
     //    static final File targetfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
     //    static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
-    private static double minEigen1 = Double.MAX_VALUE;
-    private static double minEigen2 = Double.MAX_VALUE;
-    private static long labelHash = 0;
-    private static long neighHash = 0;
+
+
+    // variables used to store the indexes for each graph
     static ArrayList<Double> eigenSeq1 = new ArrayList<>();
     static ArrayList<Double> eigenSeq2 = new ArrayList<>();
-    private static Logger logger = Logger.getLogger(GenerateGCode.class.getName());
     static Map<String, Integer> occurences = new HashMap<>();
     static Map<String, Integer> neighOccurences = new HashMap<>();
 
-    private static long id = 0L;
+    private static Logger logger = Logger.getLogger(GenerateGCode.class.getName());
+
+    /**
+     * Main method is mainly used to check the flow of the program. In case if the code needs to be run independently
+     * this method gives the entry point to the code. The method takes each query file from the query folder and checks
+     * the graphs from the target folder. It logs the decision based on three rules defined in the paper and then stores
+     * it in to the log file.
+     * <p>
+     * It uses the {@link GenerateQueryGcode} class to generate the GCode for the query graph in memory. Once the GCode
+     * for the query graph is generated, it compares the GCode of query graph with all the Gcode indexes of data graphs
+     * stored in neo4j.
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+
+        Handler fileHandler = null;
+        try {
+            fileHandler = new FileHandler("GcodeTruth_8.log");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        fileHandler.setFormatter(new SimpleFormatter());
+        logger.addHandler(fileHandler);
+
+        GenerateQueryGcode lnpt = new GenerateQueryGcode();
+        for (File fileEntry : queryfolder.listFiles()) {
+            String queryFile = null;
+            try {
+                queryFile = fileEntry.getCanonicalPath();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (queryFile.contains(".8.")) {
+                lnpt.createGraph(queryFile);
+                lnpt.updateProfilesForQuery();
+                lnpt.generateGCode();
+
+                connectToGraphDB();
+                try (Transaction trax = db.beginTx()) {
+                    for (File fileEntry1 : targetfolder.listFiles()) {
+                        String targetFile = fileEntry1.getName().substring(0, fileEntry1.getName().indexOf("."));
+                        generateGCode(targetFile);
+                        boolean isEligible = compareGCode(lnpt);
+                        if (isEligible) {
+                            logger.info("Not pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
+                        } else {
+                            logger.info("Pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
+                        }
+                    }
+                    trax.success();
+                }
+                db.shutdown();
+            }
+        }
+    }
 
     private static HashSet<Node> getAdjacentDataNodes(Integer v, String target) {
-
         HashSet<Node> nodes = new HashSet<>();
+
         Node n = db.findNode(Label.label(target), "id", v);
+
         for (Relationship r : n.getRelationships()) {
             Node neigh = r.getEndNode();
             Integer nodeId = (Integer) neigh.getProperty("id");
@@ -134,45 +202,51 @@ public class GenerateGCode {
 
     }
 
-    private static void generateGCode(String target) {
+    public static void generateGCode(String target) {
         long start = System.currentTimeMillis();
-        minEigen1 = Double.MAX_VALUE;
-        minEigen2 = Double.MAX_VALUE;
-        labelHash = 0;
-        neighHash = 0;
+
         eigenSeq1 = new ArrayList<>();
         eigenSeq2 = new ArrayList<>();
-        occurences = new HashMap<>();
-        neighOccurences = new HashMap<>();
+        occurences = new TreeMap<>();
+        neighOccurences = new TreeMap<>();
 
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
                 Node node = allNodes.next();
                 double[][] adjMatrix = createAdjMat(node, 2, target);
                 Double[] eigen = getEigenValues(adjMatrix);
-                minEigen1 = Double.min(eigen[0], minEigen1);
-                minEigen2 = Double.min(eigen[1], minEigen2);
                 eigenSeq1.add(eigen[0]);
                 eigenSeq2.add(eigen[1]);
-//                System.out.println(eigen);
 
                 generateHashForNode(node);
             }
         }
 
-//        Node n = db.createNode(Label.label(target));
-//        n.setProperty("L", labelHash);
-//        n.setProperty("N", neighHash);
-//        n.setProperty("minEigen", minEigen);
+
+        Node n = db.createNode(Label.label("GCode"));
+
+        n.setProperty("TARGET", target);
+
+        for (String key : occurences.keySet()) {
+            n.setProperty("L:" + key, occurences.get(key));
+        }
+
+        for (String key : neighOccurences.keySet()) {
+            n.setProperty("N:" + key, neighOccurences.get(key));
+        }
 
         Collections.sort(eigenSeq1, Collections.reverseOrder());
         Collections.sort(eigenSeq2, Collections.reverseOrder());
-//        System.out.println(eigens1);
-//        System.out.println(eigens2);
+
+        Double[] seq1 = eigenSeq1.toArray(new Double[0]);
+        Double[] seq2 = eigenSeq2.toArray(new Double[0]);
+
+        n.setProperty("eigenSeq1", seq1);
+        n.setProperty("eigenSeq2", seq2);
+
 
         long end = System.currentTimeMillis();
-//        System.out.println("GraphIndex for " + target + ": L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
-//        System.out.println("time taken : " + ((end - start) / 1000));
+        System.out.println("Time taken for " + target + ": " + (end - start) + " ms.");
     }
 
 
@@ -193,17 +267,6 @@ public class GenerateGCode {
                 neighOccurences.put(label, neighOccurences.get(label) + 1);
             }
         }
-
-//        String label = (String) node.getProperty("attr");
-//        labelHash += getHashCode(label);
-//        String[] neigh = (String[]) node.getProperty("neigh");
-//        long neighborHash = 0;
-//        for (String s : neigh) {
-//            if (s != null || !s.equalsIgnoreCase("")) {
-//                neighborHash += getHashCode(s);
-//            }
-//        }
-//        neighHash += neighborHash;
     }
 
     private static long getHashCode(String label) {
@@ -213,55 +276,9 @@ public class GenerateGCode {
         return ascii % 27;
     }
 
-    private static void connectToGraphDB() {
+    public static void connectToGraphDB() {
         dbFactory = new GraphDatabaseFactory();
         db = dbFactory.newEmbeddedDatabase(new File("proteins"));
-    }
-
-    public static void main(String[] args) {
-
-        Handler fileHandler = null;
-        try {
-            fileHandler = new FileHandler("./GcodeTruth.log");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        fileHandler.setFormatter(new SimpleFormatter());
-        logger.addHandler(fileHandler);
-
-        GenerateQueryGcode lnpt = new GenerateQueryGcode();
-        for (File fileEntry : queryfolder.listFiles()) {
-            String queryFile = null;
-            try {
-                queryFile = fileEntry.getCanonicalPath();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if (queryFile.contains(".8.")) {
-                lnpt.createGraph(queryFile);
-                lnpt.updateProfilesForQuery();
-                lnpt.generateGCode();
-
-                connectToGraphDB();
-                try (Transaction trax = db.beginTx()) {
-                    for (File fileEntry1 : targetfolder.listFiles()) {
-                        String targetFile = fileEntry1.getName().substring(0, fileEntry1.getName().indexOf("."));
-                        //            generateGCode("backbones_3GLD");
-                        //            generateGCode("backbones_1KFN");
-                        //            generateGCode("trial");
-                        generateGCode(targetFile);
-                        boolean isEligible = compareGCode(lnpt);
-                        if (isEligible) {
-                            logger.info("Not pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
-                        } else {
-                            logger.info("Pruned T: " + fileEntry1.getName() + "\tQ: " + fileEntry.getName() + "\n");
-                        }
-                    }
-                    trax.success();
-                }
-                db.shutdown();
-            }
-        }
     }
 
     private static boolean compareGCode(GenerateQueryGcode lnpt) {
@@ -270,24 +287,28 @@ public class GenerateGCode {
 //            System.out.println("Label condition true!");
         } else {
             logger.warning("Label condition failed!");
-            return false;
+            allFine = false;
+//            return false;
         }
         if (compareNeighLabels(lnpt)) {
 //            System.out.println("Neighbour condition true!");
         } else {
             logger.warning("Neighbour condition failed!");
-            return false;
+            allFine = false;
+//            return false;
         }
         if (lnpt.eigens1.size() > eigenSeq1.size() || lnpt.eigens2.size() > eigenSeq2.size()) {
             logger.warning("Eigen sequence size did not match!");
-            return false;
+            allFine = false;
+//            return false;
         } else {
             for (int i = 0; i < lnpt.eigens1.size(); i++) {
                 if (lnpt.eigens1.get(i) <= eigenSeq1.get(i)) {
                     continue;
                 } else {
                     logger.warning("Seq1 comparison failed!");
-                    return false;
+                    allFine = false;
+//                    return false;
                 }
             }
 
@@ -297,7 +318,8 @@ public class GenerateGCode {
                     continue;
                 } else {
                     logger.warning("Seq2 comparison failed!");
-                    return false;
+                    allFine = false;
+//                    return false;
                 }
             }
         }
