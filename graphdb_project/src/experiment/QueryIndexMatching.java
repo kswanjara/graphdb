@@ -11,19 +11,21 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
+@SuppressWarnings("ALL")
 public class QueryIndexMatching {
     private static Logger logger = Logger.getLogger(QueryIndexMatching.class.getName());
 
     public static GraphDatabaseFactory dbFactory;
     public static GraphDatabaseService db;
-//    static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
+    static final File queryfolder = new File("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query");
     //    static final File targetfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/target/");
-        static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
+//        static final File queryfolder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
 
-    static int queryNodeNumber = 8;
+    static int queryNodeNumber = 256;
 
 
     public static void main(String[] args) {
+        long start = System.currentTimeMillis();
 
         Handler fileHandler = null;
         try {
@@ -35,6 +37,8 @@ public class QueryIndexMatching {
         logger.addHandler(fileHandler);
 
         compareIndexes();
+        long end = System.currentTimeMillis();
+        System.out.println("Total time taken : " + (end - start) / 1000 + " sec. ");
     }
 
     public static void compareIndexes() {

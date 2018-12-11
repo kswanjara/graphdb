@@ -14,17 +14,13 @@ import org.neo4j.cypher.internal.frontend.v3_3.phases.Do;
 import java.io.*;
 import java.util.*;
 
-
+@SuppressWarnings("ALL")
 public class GenerateQueryGcode {
 
     static final File folder = new File("/Users/jinalshah/Downloads/Proteins/Proteins/query/");
     Graph<Integer, DefaultEdge> queryGraph = null;
     HashMap<Integer, String> attributeLabels = null;
     HashMap<Integer, List<String>> profiles = new HashMap<>();
-    long labelHash = 0;
-    long neighHash = 0;
-    double minEigen1 = Double.MIN_VALUE;
-    double minEigen2 = Double.MIN_VALUE;
     ArrayList<Double> eigens1 = new ArrayList<>();
     ArrayList<Double> eigens2 = new ArrayList<>();
     Map<String, Integer> occurences = new HashMap<>();
@@ -153,10 +149,6 @@ public class GenerateQueryGcode {
 
     public void generateGCode() {
         long start = System.currentTimeMillis();
-        minEigen1 = Double.MIN_VALUE;
-        minEigen2 = Double.MIN_VALUE;
-        labelHash = 0;
-        neighHash = 0;
         eigens1 = new ArrayList<>();
         eigens2 = new ArrayList<>();
         occurences = new HashMap<>();
@@ -165,8 +157,6 @@ public class GenerateQueryGcode {
         for (Integer u : queryGraph.vertexSet()) {
             double[][] adjMatrix = createAdjMat(u, 2);
             Double[] eigen = getEigenValues(adjMatrix);
-            minEigen1 = Double.max(eigen[0], minEigen1);
-            minEigen2 = Double.max(eigen[1], minEigen2);
             eigens1.add(eigen[0]);
             eigens2.add(eigen[1]);
 
@@ -176,20 +166,11 @@ public class GenerateQueryGcode {
         Collections.sort(eigens1, Collections.reverseOrder());
         Collections.sort(eigens2, Collections.reverseOrder());
 
-//        Node n = db.createNode(Label.label(target));
-//        n.setProperty("L", labelHash);
-//        n.setProperty("N", neighHash);
-//        n.setProperty("minEigen", minEigen);
-
-
         long end = System.currentTimeMillis();
-//        System.out.println("GraphIndex for : L = " + labelHash + " N = " + neighHash + " minEigen1 = " + minEigen1 + " minEigen2 = " + minEigen2);
-//        System.out.println("time taken : " + ((end - start) / 1000));
     }
 
     private void generateHashForNode(Integer n) {
         String label = attributeLabels.get(n);
-        labelHash += getHashCode(label);
         List<String> neigh = profiles.get(n);
 
         if (!occurences.containsKey(label)) {
@@ -200,13 +181,12 @@ public class GenerateQueryGcode {
         long neighborHash = 0;
         for (String s : neigh) {
             if (s != null || !s.equalsIgnoreCase("")) {
-                if (!neighOccurences.containsKey(label)) {
-                    neighOccurences.put(label, 0);
+                if (!neighOccurences.containsKey(s)) {
+                    neighOccurences.put(s, 0);
                 }
-                neighOccurences.put(label, neighOccurences.get(label) + 1);
+                neighOccurences.put(s, neighOccurences.get(s) + 1);
             }
         }
-        neighHash += neighborHash;
     }
 
     private long getHashCode(String label) {
@@ -218,14 +198,6 @@ public class GenerateQueryGcode {
 
     public static void main(String[] args) throws FileNotFoundException {
         GenerateQueryGcode lnpt = new GenerateQueryGcode();
-//        for (File fileEntry : folder.listFiles()) {
-//            String queryFileFile = null;
-//            try {
-//                queryFileFile = fileEntry.getCanonicalPath();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\mus_musculus_1U34.8.sub.grf");
         lnpt.createGraph("C:\\Users\\Kunal Wanjara\\Desktop\\GarphDB\\GraphDB_Assignment5\\Proteins\\Proteins\\Proteins\\query\\backbones_1EMA.8.sub.grf");
         lnpt.updateProfilesForQuery();
         lnpt.generateGCode();

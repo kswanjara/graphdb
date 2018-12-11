@@ -8,12 +8,8 @@ import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 
 /**
@@ -29,6 +25,7 @@ import java.util.logging.SimpleFormatter;
  * The {@link HashMap} is used to store the hash of each label and its neighbors. {@link ArrayList} of {@link Double} is
  * used to maintain the ordered sequence of top two eigen values of each vertex.
  */
+@SuppressWarnings("ALL")
 public class GenerateGCode {
 
     public static GraphDatabaseFactory dbFactory;
@@ -152,8 +149,8 @@ public class GenerateGCode {
 
         eigenSeq1 = new ArrayList<>();
         eigenSeq2 = new ArrayList<>();
-        occurences = new TreeMap<>();
-        neighOccurences = new TreeMap<>();
+        occurences = new HashMap<>();
+        neighOccurences = new HashMap<>();
 
         try (ResourceIterator<Node> allNodes = db.findNodes(Label.label(target))) {
             while (allNodes.hasNext()) {
@@ -205,10 +202,10 @@ public class GenerateGCode {
 
         for (String s : neigh) {
             if (s != null || !s.equalsIgnoreCase("")) {
-                if (!neighOccurences.containsKey(label)) {
-                    neighOccurences.put(label, 0);
+                if (!neighOccurences.containsKey(s)) {
+                    neighOccurences.put(s, 0);
                 }
-                neighOccurences.put(label, neighOccurences.get(label) + 1);
+                neighOccurences.put(s, neighOccurences.get(s) + 1);
             }
         }
     }
